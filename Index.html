@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KINO HUB — Кино үзэх</title>
+<style>
+:root{--bg:#080a10;--panel:#141925;--line:#283044;--muted:#9ca7bb;--red:#e50914}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f6f7fb;font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+header{height:70px;padding:0 clamp(16px,5vw,64px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #202637;position:sticky;top:0;background:#080a10ed;z-index:5}
+.logo{font-weight:900;font-size:24px;letter-spacing:.5px}.logo span{color:var(--red)}
+button{border:0;border-radius:9px;padding:11px 16px;font-weight:750;cursor:pointer}.red{background:var(--red);color:white}.dark{background:#2a3244;color:white}.ghost{background:transparent;color:#fff;border:1px solid #3a4358}
+main{max-width:1180px;margin:auto;padding:28px 18px 70px}.hero{padding:26px 0 22px}.eyebrow{color:#ff5a62;font-size:12px;font-weight:800;letter-spacing:2px}.hero h1{font-size:clamp(32px,6vw,54px);line-height:1.05;margin:9px 0}.hero p{color:var(--muted);max-width:620px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.toolbar input{flex:1;min-width:190px}
+input,textarea,select{width:100%;background:#0c111c;color:white;border:1px solid #374158;border-radius:9px;padding:12px;font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}.movie{background:var(--panel);border:1px solid var(--line);border-radius:13px;overflow:hidden}.poster{width:100%;aspect-ratio:16/10;object-fit:cover;background:#20283a;display:block}.moviebody{padding:13px}.movie h3{font-size:17px;margin:0 0 7px}.movie p{font-size:13px;color:var(--muted);margin:0 0 12px;min-height:34px;white-space:pre-wrap}.movie button{width:100%}
+.empty{border:1px dashed #39445c;padding:28px;text-align:center;border-radius:13px;color:var(--muted);grid-column:1/-1}
+.modal{display:none;position:fixed;inset:0;background:#000b;z-index:10;overflow:auto;padding:20px}.modal.show{display:grid;place-items:center}.dialog{width:min(620px,100%);background:#141925;border:1px solid var(--line);border-radius:16px;padding:22px}.dialog h2{margin-top:0}.field{margin:13px 0}.field label{display:block;color:#cbd3e2;font-size:13px;margin-bottom:6px}.row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}.hint{font-size:12px;color:var(--muted);line-height:1.5}.status{font-size:13px;color:#ffb7bc;min-height:20px;margin-top:10px}
+.player{width:min(950px,100%);background:#101521;border-radius:15px;padding:15px}.player video{width:100%;max-height:70vh;background:#000}.player h2{margin:12px 0 5px}.player p{color:var(--muted)}
+@media(max-width:560px){header{height:62px}.logo{font-size:21px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.movie h3{font-size:14px}.moviebody{padding:10px}.hero{padding-top:20px}}
+</style>
+</head>
+<body>
+<header><div class="logo">KINO<span>HUB</span></div><button class="ghost" id="adminBtn">Админ нэвтрэх</button></header>
+<main>
+<section class="hero"><div class="eyebrow">ТАНЫ КИНОНЫ ЕРТӨНЦ</div><h1>Киноны цуглуулга</h1><p>Шинэ кино, дуртай бүтээлүүдээ нэг дороос үзээрэй.</p></section>
+<div class="toolbar"><input id="search" placeholder="Киноны нэрээр хайх…"><select id="category"><option value="">Бүх ангилал</option><option>Адал явдал</option><option>Инээдэм</option><option>Драм</option><option>Аймшиг</option><option>Баримтат</option><option>Бусад</option></select></div>
+<div id="grid" class="grid"><div class="empty">Кинонуудыг ачаалж байна…</div></div>
+</main>
+
+<div class="modal" id="authModal"><div class="dialog"><h2>Админ нэвтрэх</h2><div class="field"><label>Админ имэйл</label><input id="email" type="email" autocomplete="username" placeholder="you@example.com"></div><div class="field"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"></div><div class="status" id="authStatus"></div><div class="row"><button class="dark" data-close="authModal">Болих</button><button class="red" id="loginBtn">Нэвтрэх</button></div><p class="hint">Админ бүртгэлийг Supabase Dashboard дээр урьдчилан үүсгэнэ. Нийтийн бүртгэл нээлттэй биш.</p></div></div>
+
+<div class="modal" id="uploadModal"><div class="dialog"><h2>＋ Кино нэмэх</h2>
+<div class="field"><label>Киноны нэр *</label><input id="title" maxlength="120" placeholder="Киноны нэр"></div>
+<div class="field"><label>Тайлбар</label><textarea id="description" rows="3" placeholder="Киноны тухай"></textarea></div>
+<div class="field"><label>Ангилал</label><select id="newCategory"><option>Бусад</option><option>Адал явдал</option><option>Инээдэм</option><option>Драм</option><option>Аймшиг</option><option>Баримтат</option></select></div>
+<div class="field"><label>Постер зураг</label><input id="posterFile" type="file" accept="image/*"></div>
+<div class="field"><label>Видео файл *</label><input id="videoFile" type="file" accept="video/*"></div>
+<p class="hint">Том видео файлыг байршуулахад интернетийн хурд, хадгалах сангийн багтаамжаас хамаарч хугацаа орно. Зөвхөн өөрийн эрхтэй контент оруулна уу.</p>
+<div class="status" id="uploadStatus"></div><div class="row"><button class="dark" data-close="uploadModal">Болих</button><button class="red" id="uploadBtn">Байршуулах</button></div>
+</div></div>
+
+<div class="modal" id="playerModal"><div class="player"><div class="row"><button class="dark" data-close="playerModal">Хаах ✕</button></div><video id="player" controls playsinline></video><h2 id="playerTitle"></h2><p id="playerDesc"></p></div></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// 1) Supabase Dashboard -> Project Settings -> API хэсгийн утгуудаар солино.
+const SUPABASE_URL = 'https://gxzqknpkxexqbxvoujqh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ggXrHicf4U3AZRU2cfrMtQ_fu_STgwg';
+const configured = !SUPABASE_URL.startsWith('PASTE_') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
+const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let isAdmin = false, allMovies = [];
+
+const $ = id => document.getElementById(id);
+const open = id => $(id).classList.add('show');
+const close = id => $(id).classList.remove('show');
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
+$('adminBtn').onclick=()=>isAdmin?open('uploadModal'):open('authModal');
+
+function escapeText(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){
+ const q=$('search').value.toLowerCase(), cat=$('category').value;
+ const list=allMovies.filter(m=>(m.title||'').toLowerCase().includes(q)&&(!cat||m.category===cat));
+ $('grid').innerHTML='';
+ if(!list.length){$('grid').innerHTML='<div class="empty">Одоогоор кино алга байна.</div>';return;}
+ for(const m of list){
+  const card=document.createElement('article');card.className='movie';
+  const poster=m.poster_url?`<img class="poster" src="${escapeText(m.poster_url)}" alt="">`:'<div class="poster"></div>';
+  card.innerHTML=`${poster}<div class="moviebody"><h3>${escapeText(m.title)}</h3><p>${escapeText(m.description||m.category||'')}</p><button class="red">▶ Үзэх</button>${isAdmin?'<button class="dark delete" style="margin-top:7px">Устгах</button>':''}</div>`;
+  card.querySelector('.red').onclick=()=>play(m);
+  if(isAdmin)card.querySelector('.delete').onclick=()=>removeMovie(m);
+  $('grid').append(card);
+ }
+}
+function play(m){$('player').src=m.video_url;$('playerTitle').textContent=m.title;$('playerDesc').textContent=m.description||'';open('playerModal');}
+$('playerModal').addEventListener('transitionend',()=>{});
+$('playerModal').querySelector('[data-close]').addEventListener('click',()=>{$('player').pause();$('player').removeAttribute('src');$('player').load();});
+$('search').oninput=render;$('category').onchange=render;
+
+async function loadMovies(){
+ if(!configured){$('grid').innerHTML='<div class="empty">Сайтны тохиргоо хүлээгдэж байна. Доорх SETUP зааврыг дагаад Supabase-ийн URL болон public key-г холбоно уу.</div>';return;}
+ const {data,error}=await supabase.from('movies').select('*').order('created_at',{ascending:false});
+ if(error){$('grid').innerHTML='<div class="empty">Кино ачаалж чадсангүй: '+escapeText(error.message)+'</div>';return;}
+ allMovies=data||[];render();
+}
+$('loginBtn').onclick=async()=>{
+ $('authStatus').textContent='Нэвтэрч байна…';
+ const {error}=await supabase.auth.signInWithPassword({email:$('email').value,password:$('password').value});
+ if(error){$('authStatus').textContent=error.message;return;}
+ isAdmin=true;close('authModal');$('adminBtn').textContent='＋ Кино нэмэх';render();
+};
+async function removeMovie(m){
+ if(!confirm(`"${m.title}" киног устгах уу?`))return;
+ const {error}=await supabase.from('movies').delete().eq('id',m.id);
+ if(error){alert(error.message);return;}
+ allMovies=allMovies.filter(x=>x.id!==m.id);render();
+}
+$('uploadBtn').onclick=async()=>{
+ const title=$('title').value.trim(), video=$('videoFile').files[0], poster=$('posterFile').files[0];
+ if(!title||!video){$('uploadStatus').textContent='Киноны нэр болон видео файл заавал хэрэгтэй.';return;}
+ if(!video.type.startsWith('video/')){$('uploadStatus').textContent='Видео файл сонгоно уу.';return;}
+ $('uploadBtn').disabled=true;$('uploadStatus').textContent='Видео байршуулж байна…';
+ try{
+  const safeName=f=>`${crypto.randomUUID()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+  const videoPath=safeName(video);
+  let {error}=await supabase.storage.from('videos').upload(videoPath,video,{cacheControl:'3600',upsert:false});
+  if(error)throw error;
+  const videoUrl=supabase.storage.from('videos').getPublicUrl(videoPath).data.publicUrl;
+  let posterUrl=null;
+  if(poster){const posterPath=safeName(poster);const p=await supabase.storage.from('posters').upload(posterPath,poster,{cacheControl:'3600',upsert:false});if(p.error)throw p.error;posterUrl=supabase.storage.from('posters').getPublicUrl(posterPath).data.publicUrl;}
+  const row={title,description:$('description').value.trim(),category:$('newCategory').value,video_url:videoUrl,video_path:videoPath,poster_url:posterUrl};
+  const result=await supabase.from('movies').insert(row).select().single();
+  if(result.error)throw result.error;
+  allMovies.unshift(result.data);render();close('uploadModal');$('title').value='';$('description').value='';$('videoFile').value='';$('posterFile').value='';$('uploadStatus').textContent='';
+ }catch(e){$('uploadStatus').textContent='Алдаа: '+e.message;}
+ finally{$('uploadBtn').disabled=false;}
+};
+if(configured){supabase.auth.onAuthStateChange((_event,session)=>{isAdmin=!!session; $('adminBtn').textContent=isAdmin?'＋ Кино нэмэх':'Админ нэвтрэх';render();});}
+loadMovies();
+</script>
+</body></html>
